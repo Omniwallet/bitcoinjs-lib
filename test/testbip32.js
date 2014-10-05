@@ -48,6 +48,35 @@ test("InitFromSeed Reconstruction", function() {
   });
 });
 
+test("Init from malformed private key", function() {
+  var badXprvs = [
+    {
+      bad: 'DeaWiRvhTUWHmRFa6AYuSLJEmR7jd48cJYVyMZ3wWmcY9fzT2uRWpzhXBS7tSYEow9UnLPkjja4vm92y4YbytTvqYzwcLWQmY4skTZW3uLzBtT',
+      xprv: 'xprv9s21ZrQH143K3o9pSpB5m3Sj88papS2sjiTycPurVH6ZuQPCeqfrD3sQ3h6rVSWvhCUKpdp6wYrWJBph69Na6YfTwV2X8LDVDLcWVXihm4m',
+      xpub: 'xpub661MyMwAqRbcGHEHYqi68BPTgAf5Dtkj6wPaQnKU3cdYnCiMCNz6krBstybTVjDvBLmXW2hdBDiNPBUCPe2jNVMgWQK8RkzF1tp6pc1jj2w'
+    },
+    {
+      bad: 'DeaWiRvhTUWHmRFa69kwJaBvirhPGoqyhCWNTVVEiA3UHbsj7u9B2CnEZ5po2ng5ABNB2W8Azof6A7EjqWoWMLa9yCesKB6Nurq5pXFnuFRUd9',
+      xprv: 'xprv9s21ZrQH143K3jevgZVE7kMFJmmBERndhvjdWeuuSGvtuT95EJzepcHxAsCLewyFRVUrPbZoHQMCPK97jPa7JwwG1fThj9ZE4SB7jy63T2B',
+      xpub: 'xpub661MyMwAqRbcGDjPnb2EUtHyrobfdtWV59fEK3KWzcTsnFUDmrJuNQcS29LheEmZqPDZsVoTdabV4qz7QUmVkvbDgZ4EBtBDoVHzvmaF3ua'
+    },
+    {
+      bad: 'DeaWiRvhTUWHmRFa5n2ze9EeEiM2zaeU6oXBRQFTmQwGRm8TH4q6dv53BYo62GUA6QnRo37ci2L3t4oNsqW6HMQr6s22SyJEKsxH6XrSch5twj',
+      xprv: 'xprv9s21ZrQH143K25moQwMDMXVRo9WNccLCzhcq92eX6HmtyuuHswEpdZLRAaJGQaWnJkdUsSKXwK1DFbbLAsVpRziPXUQJTfndyeVGG8pTTVh',
+      xpub: 'xpub661MyMwAqRbcEZrGWxtDifSAMBLs2544MvYRwR48edJsriESRUZ5BMeu1r6GFjYr3n9RKzWJACkDazD8YYBdfkFjDLRYmJynVLzHZxh1qTj'
+    }
+  ];
+  badXprvs.forEach(function(testcase) {
+    var key = new Bitcoin.BIP32().initFromBadXprv(testcase.bad);
+    var xpub = key.extended_public_key_string();
+    var xprv = key.extended_private_key_string();
+    equal(xpub, testcase.xpub);
+    equal(xprv, testcase.xprv);
+    var newKey = new Bitcoin.BIP32(xprv);
+    equal(newKey.extended_public_key_string(), xpub);
+  });
+});
+
 // Verify that we derive the same keys as expected
 test("Derivation", function () {
   expect(testKeychains.reduce(function(sum, testKeychain) { return sum + testKeychain.vectors.length; }, 0) * 2);

@@ -22,7 +22,23 @@ var BIP32 = function(bytes) {
         }
         this.init_from_bytes(bytes);
     }
-}
+};
+
+// 10/5/2014
+// Discovered a bug in library which led to bad xprvs being generated due to lack of zero-padding
+// This method allows us to recover from the incorrectly-constructed xprvs.
+BIP32.prototype.initFromBadXprv = function(badXprv) {
+    var decoded = Bitcoin.Base58.decode(badXprv);
+    var len = decoded.length;
+    var checksum = decoded.slice(len-4, len);
+    bytes = decoded.slice(0, len-4);
+    var hash = Crypto.SHA256( Crypto.SHA256( bytes, { asBytes: true } ), { asBytes: true } );
+    if (hash[0] != checksum[0] || hash[1] != checksum[1] || hash[2] != checksum[2] || hash[3] != checksum[3] ) {
+        throw new Error("Invalid checksum");
+    }
+    this.init_from_bad_bytes(bytes);
+    return this;
+};
 
 // Initialize from a bitcoin seed
 BIP32.prototype.initFromSeed = function(seedBytes) {
@@ -44,7 +60,7 @@ BIP32.prototype.initFromSeed = function(seedBytes) {
     this.build_extended_public_key();
     this.build_extended_private_key();
     return this;
-}
+};
 
 BIP32.prototype.init_from_bytes = function(bytes) {
     function uint(f, size) {
@@ -95,7 +111,57 @@ BIP32.prototype.init_from_bytes = function(bytes) {
 
     this.build_extended_public_key();
     this.build_extended_private_key();
-}
+};
+
+// See comment on initFromBadXprv
+BIP32.prototype.init_from_bad_bytes = function(bytes) {
+    function uint(f, size) {
+        if (f.length < size) {
+            throw new Error("not enough data");
+        }
+        var n = 0;
+        for (var i = 0; i < size; i++) {
+            n *= 256;
+            n += f[i];
+        }
+        return n;
+    }
+    function u8(f)  { return uint(f,1); }
+    function u32(f) { return uint(f,4); }
+
+    function decompress_pubkey(key_bytes) {
+        var ecparams = getSECCurveByName("secp256k1");
+        return ecparams.getCurve().decodePointHex(Crypto.util.bytesToHex(key_bytes));
+    }
+
+    this.version            = u32(bytes.slice(0, 4));
+    this.depth              = u8 (bytes.slice(4, 5));
+    this.parent_fingerprint = bytes.slice(5, 9);
+    this.child_index        = u32(bytes.slice(9, 13));
+    this.chain_code         = bytes.slice(13, 45);
+
+    var key_bytes = bytes.slice(45);
+    while (key_bytes.length < 32) {
+        key_bytes.unshift(0);
+    }
+
+    if ( (this.version == MAINNET_PRIVATE || this.version == TESTNET_PRIVATE) && key_bytes[0] == 0 ) {
+        this.eckey = new Bitcoin.ECKey(key_bytes.slice(1, 33));
+        this.eckey.setCompressed(true);
+        this.has_private_key = true;
+    } else if ( (this.version == MAINNET_PUBLIC || this.version == TESTNET_PUBLIC) &&
+                (key_bytes[0] == 0x02 || key_bytes[0] == 0x03) ) {
+        this.eckey = new Bitcoin.ECKey("0");
+        this.eckey.pubPoint = decompress_pubkey(key_bytes);
+        this.eckey.setCompressed(true);
+        this.has_private_key = false;
+    } else {
+        throw new Error("Invalid key");
+    }
+
+    this.build_extended_public_key();
+    this.build_extended_private_key();
+};
 
 BIP32.prototype.build_extended_public_key = function() {
     this.extended_public_key = [];
