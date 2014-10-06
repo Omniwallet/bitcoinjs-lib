@@ -15,6 +15,38 @@ test("Create from seed", function() {
   testKeychains.forEach(testKeychain);
 });
 
+test("InitFromSeed Reconstruction", function() {
+  var seeds = [
+    'd2c282451514b98ae77d479472287336be45d00a55617d65296f4695d7e11251',
+    '33646e512afdd33e66ee5c5809227698cfaf83a90654baf13c6f3b8e3cba1b7b',
+    'db7ab7e74208ba688de7fea5e82b578dcf14a1ea5e66373d8799743511442626',
+    '03e09ff37b11cd310019e730b669916fbc94ba8df3741128195d66ae3b3f8460'
+  ];
+
+  seeds.forEach(function(seed) {
+    var key = new Bitcoin.BIP32().initFromSeed(seed);
+    var xpub = key.extended_public_key_string();
+    var xprv = key.extended_private_key_string();
+
+    var fromPrivate = new Bitcoin.BIP32(key.extended_private_key_string());
+    equal(fromPrivate.extended_public_key_string(), xpub);
+    equal(fromPrivate.extended_private_key_string(), xprv);
+
+    var fromPublic = new Bitcoin.BIP32(key.extended_public_key_string());
+    equal(fromPublic.extended_public_key_string(), xpub);
+
+    var derivedKey = key.derive('m/100');
+    xpub = derivedKey.extended_public_key_string();
+    xprv = derivedKey.extended_private_key_string();
+
+    var fromPrivate = new Bitcoin.BIP32(derivedKey.extended_private_key_string());
+    equal(fromPrivate.extended_public_key_string(), xpub);
+    equal(fromPrivate.extended_private_key_string(), xprv);
+
+    var fromPublic = new Bitcoin.BIP32(derivedKey.extended_public_key_string());
+    equal(fromPublic.extended_public_key_string(), xpub);
+  });
+});
 
 // Verify that we derive the same keys as expected
 test("Derivation", function () {
