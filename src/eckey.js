@@ -343,7 +343,7 @@ Bitcoin.ECKey = (function () {
    */
   ECKey.isCompressedWalletImportFormat = function (key) {
     key = key.toString();
-    return (ECKey.privateKeyPrefix == ECKey.privateKeyPrefix) ?
+    return (ECKey.privateKeyPrefix == 0x80) ?
       (/^[LK][123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{51}$/.test(key)) :
       (/^c[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{51}$/.test(key));
   };
